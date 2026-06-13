@@ -1,0 +1,41 @@
+name: Portfolio Auto-updater
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update-portfolio:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run portfolio updater
+        env:
+          GH_TOKEN:            ${{ secrets.GH_TOKEN }}
+          GH_USERNAME:         ${{ secrets.GH_USERNAME }}
+          NETLIFY_BUILD_HOOK:  ${{ secrets.NETLIFY_BUILD_HOOK }}
+        run: python portfolio_updater.py
+
+      - name: Commit projects.json
+        run: |
+          git config user.name  "portfolio-bot"
+          git config user.email "bot@portfolio.local"
+          git add projects.json
+          git diff --staged --quiet || git commit -m "Auto-update projects.json [skip ci]"
+          git push
